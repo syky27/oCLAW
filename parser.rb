@@ -16,11 +16,12 @@ end
 puts url = "http://" + printer_ip + ":5000/api/state?apikey=r3pr4pfit" 
 puts upload_url = "http://" + printer_ip + ":5000/api/load?apikey=r3pr4pfit" 
 u = "http://172.16.60.123:5000/ajax/gcodefiles/upload"
+u = "http://172.16.60.123:5000/api/files/local"
 uri = URI(url)
 puts uri
 
 
-RestClient.post u, :gcode_file => File.new(ARGV[1], 'r', :select => "true") 
+RestClient.post( u, :file => File.new(ARGV[1], 'r'), :select => "true", :apikey => "r3pr4pfit" )
 
 
 #RestClient.post(u, File.new(ARGV[1]))
