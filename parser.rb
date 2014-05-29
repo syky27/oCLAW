@@ -20,7 +20,7 @@ uri = URI(url)
 puts uri
 
 
-RestClient.post u, :gcode_file => File.new(ARGV[1], 'r', :select => "true")
+RestClient.post u, :gcode_file => File.new(ARGV[1], 'r', :select => "true") 
 
 
 #RestClient.post(u, File.new(ARGV[1]))
