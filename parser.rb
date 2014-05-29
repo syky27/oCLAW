@@ -6,6 +6,33 @@ require 'net/http'
 require 'rest_client'
 require 'json'
 
+
+class Printer
+  def initialize(printer)
+    @name = printer['name']
+    @url  = printer['url']
+    @port = printer['port']
+    @select = printer['select']
+    @print = printer['print']
+  end
+
+  def info
+    puts 'Name    ' + @name
+    puts 'URL     ' + @url
+    puts 'PORT    ' + @port
+    puts 'select  ' + @select
+    puts 'print   ' + @print
+  end
+end
+
+
+class OCAW
+  def initialize
+    @printer = Printer.new(nil)
+  end
+end
+
+
 # my_ip = Socket::getaddrinfo(Socket.gethostname,"echo",Socket::AF_INET)[0][3]
 # printer_ip = my_ip[0.. (my_ip.rindex('.'))]+ARGV[0]
 # puts my_ip + " - My IP address"
@@ -25,9 +52,13 @@ require 'json'
 def initDefaultsFromConfig()
 	File.open(".config.json") do|config|
 		parsed = JSON.parse(config.read)
-		p parsed["port"]
+			parsed["config"].each do |conf|
+				# puts conf["port"]
+				p conf
+			end
+		end
 	end
-end
+
 
 def upload_file(url, file, select, apikey)
 	RestClient.post( url, :file => File.new(file, 'r'), :select => select, :apikey => apikey )
