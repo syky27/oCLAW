@@ -10,17 +10,18 @@ require 'json'
 
 class Printer
   def initialize(printer)
-    @name = printer['name']
-    @url  = printer['url']
-    @port = printer['port']
-    @select = printer['select']
-    @print = printer['print']
+    @name = printer['printer']['name']
+    @url  = printer['printer']['url']
+    @port = printer['printer']['port']
+    @select = printer['printer']['select']
+    @print = printer['printer']['print']
+
   end
 
-  def self.info
+  def info
     puts 'Name    ' + @name
     puts 'URL     ' + @url
-    puts 'PORT    ' + @port
+    puts 'PORT    ' + @port.to_s
     puts 'select  ' + @select
     puts 'print   ' + @print
   end
@@ -29,9 +30,9 @@ end
 
 class OCAW
   def initialize
+    @printers = Array.new
     loadConfig('.config.json')
-  #  @printer = Printer.new(nil)
-
+    @printers.at(0).info
   end
 
   def loadConfig(config)
@@ -40,6 +41,8 @@ class OCAW
       parsed["printers"].each do |printer|
         # puts conf["port"]
         puts printer
+        @printers.push( Printer.new(printer))
+
       end
     end
   end
