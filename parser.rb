@@ -1,4 +1,5 @@
 # RestClient.post( upload_url, :file => File.new(ARGV[1], 'r'), :select => "true", :apikey => "r3pr4pfit" )
+require 'rubygems'
 require 'optparse'
 require 'base64'
 require 'socket'
@@ -16,7 +17,7 @@ class Printer
     @print = printer['print']
   end
 
-  def info
+  def self.info
     puts 'Name    ' + @name
     puts 'URL     ' + @url
     puts 'PORT    ' + @port
@@ -28,7 +29,19 @@ end
 
 class OCAW
   def initialize
+    loadConfig('.config.json')
     @printer = Printer.new(nil)
+
+  end
+
+  def loadConfig(config)
+    File.open(config) do|config|
+      parsed = JSON.parse(config.read)
+      parsed['config'].each do |conf|
+        # puts conf["port"]
+        p conf
+      end
+    end
   end
 end
 
@@ -64,16 +77,16 @@ def upload_file(url, file, select, apikey)
 	RestClient.post( url, :file => File.new(file, 'r'), :select => select, :apikey => apikey )
 end
 
-initDefaultsFromConfig()
 
 
 
+  OCAW.new()
+
+
+#initDefaultsFromConfig()
 #RestClient.post(u, File.new(ARGV[1]))
 # puts printer_state = Net::HTTP.get(uri) # => String
-
 # http://172.16.60.123:5000/ajax/gcodefiles/upload
-
-
 # http://localhost:5000/api/state?apikey=PUT_YOUR_API_KEY_HERE
 
 
