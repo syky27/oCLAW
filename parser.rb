@@ -30,16 +30,16 @@ end
 class OCAW
   def initialize
     loadConfig('.config.json')
-    @printer = Printer.new(nil)
+  #  @printer = Printer.new(nil)
 
   end
 
   def loadConfig(config)
     File.open(config) do|config|
       parsed = JSON.parse(config.read)
-      parsed['config'].each do |conf|
+      parsed["printers"].each do |printer|
         # puts conf["port"]
-        p conf
+        puts printer
       end
     end
   end

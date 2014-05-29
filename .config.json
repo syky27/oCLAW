@@ -1,15 +1,18 @@
 {
-    "printer": [
+    "printers": [
         {
-            "home": {
+            "printer": {
+                "name" :"home",
                 "url": "172.16.60.123",
                 "port": 5000,
                 "apikey": "r3pr4pfit",
                 "select": "true",
                 "print": "false"
             }
-        },{"work":
-            {
+        },
+        {
+            "printer": {
+                "name": "work",
                 "url": "172.16.60.133",
                 "port": 5000,
                 "apikey": "fekal_fekal",
@@ -17,5 +20,6 @@
                 "print": "false"
             }
 
-        }]
+        }
+    ]
 }
