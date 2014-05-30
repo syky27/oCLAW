@@ -103,13 +103,13 @@ class OCAW
   def deleteFile(file, printer)
     @printers.each do |p|
       if p.getName() == printer
-        begin
+        # begin
           puts delete_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/"  + p.getLocation().to_s  + "/" + file.to_s + "?apikey=" + p.getAPI().to_s
-          response RestClient.delete(delete_url)
+          response = RestClient.delete(delete_url)
           puts response
-        rescue
-          abort("FAILURE => File not found !!!")
-        end
+        # rescue
+        #   abort("FAILURE => File not found !!!")
+        # end
         puts 'SUCCESS => File deleted'
 
       end
@@ -129,8 +129,7 @@ end
 
   program = OCAW.new()
   #program.uploadFile(ARGV[1],ARGV[0])
-
   program.uploadFile("/Users/syky/Desktop/test02.gcode", "work")
-program.deleteFile("test02.gcode", "work")
+  program.deleteFile("test02.gcode", "work")
 
 
