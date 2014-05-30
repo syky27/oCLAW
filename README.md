@@ -14,7 +14,7 @@ Install script will create `.config.json` file in your home directory, it looks 
                     "name" :"home",
                     "url": "172.16.60.123",
                     "port": 5000,
-                    "apikey": "r3pr4pfit",
+                    "apikey": "42fekals",
                     "select": "true",
                     "print": "false",
                     "location":"local"
@@ -35,7 +35,18 @@ Install script will create `.config.json` file in your home directory, it looks 
     }
 
 
+![](https://raw.githubusercontent.com/syky27/oCLAW/master/OP_API_KEY.png)
 
+
+You can set API key to whatever you want it's setting is in octoprint frontend or you can set apikey in Octoprint's `comfig.yaml`
+
+`"select": "true"` `select` can be `true` or `false` it says if uploaded file will be set as selected to be ready to print.
+
+
+`"print": "false"` `print` is also boolean and it says if the print is supposed to start right away after file uploading
+
+
+`"location": "local"` `location` set's you main storage, `local`  or  `sdcard`
 
 
 Examples:
