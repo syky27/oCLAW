@@ -85,12 +85,23 @@ class OCAW
         puts "printer ok"
         upload_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/" + p.getLocation().to_s
         RestClient.post( upload_url, :file => File.new(file, 'r'), :select => p.getSelect().to_s, :apikey => p.getAPI().to_s )
+      end
+    end
+  end
+
+  def deleteFile(file, printer)
+
+    @printers.each do |p|
+      if p.getName() == printer
+        puts delete_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/"  + p.getLocation().to_s  + "/" + file.to_s + "?apikey=" + p.getAPI().to_s
+        puts p.getAPI()
+        puts RestClient.delete(delete_url)
 
       end
     end
-
-    # RestClient.post( @url, :file => File.new(file, 'r'), :select => @select, :apikey => @apikey )
   end
+
+
 
 end
 
@@ -136,9 +147,11 @@ end
 
 
 
-  program = OCAW.new()
-  program.uploadFile(ARGV[0],"home")
 
+
+  program = OCAW.new()
+  program.uploadFile(ARGV[1],ARGV[0])
+  #program.deleteFile("test02.gcode", "home")
 
 
 
