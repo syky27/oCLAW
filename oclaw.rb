@@ -65,16 +65,13 @@ class OCAW
   def initialize
     @printers = Array.new
     loadConfig('.config.json')
-    @printers.at(0).info
   end
 
   def loadConfig(config)
     File.open(config) do|config|
       parsed = JSON.parse(config.read)
       parsed["printers"].each do |printer|
-        # puts conf["port"]
-        puts printer
-        @printers.push( Printer.new(printer))
+      @printers.push( Printer.new(printer))
       end
     end
   end
@@ -82,15 +79,23 @@ class OCAW
   def uploadFile(file, printer)
     @printers.each  do  |p|
       if  p.getName() == printer
-        puts "printer ok"
         upload_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/" + p.getLocation().to_s
         begin
-          puts response =  RestClient.post( upload_url, :file => File.new(file, 'r'), :select => p.getSelect().to_s, :apikey => p.getAPI().to_s )
+          response =  RestClient.post( upload_url, :file => File.new(file, 'r'), :select => p.getSelect().to_s, :apikey => p.getAPI().to_s )
           response = JSON.parse(response)
         rescue
           abort("File does not exists")
         end
         if response["done"] == true
+          sleep(50)
+          filename = file[ (file.rindex('/')) .. file.length]
+          puts info_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/"  + p.getLocation().to_s  + filename.to_s + "?apikey=" + p.getAPI().to_s
+          info = RestClient.get(info_url)
+          puts info
+          puts info = JSON.parse(info, )
+          puts info["gcodeAnalysis"] => "estimatedPrintTime"
+
+
           puts 'SUCCESS => File ' + file + ' successfully uploaded to printer ' + printer + ' on ' + p.getLocation().to_s + ' storage.'
         else
           puts 'FAILURE => File ' + file + ' Not uploaded !!!'
@@ -103,13 +108,12 @@ class OCAW
   def deleteFile(file, printer)
     @printers.each do |p|
       if p.getName() == printer
-        # begin
-          puts delete_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/"  + p.getLocation().to_s  + "/" + file.to_s + "?apikey=" + p.getAPI().to_s
-          response = RestClient.delete(delete_url)
-          puts response
-        # rescue
-        #   abort("FAILURE => File not found !!!")
-        # end
+        begin
+          delete_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/"  + p.getLocation().to_s  + "/" + file.to_s + "?apikey=" + p.getAPI().to_s
+          RestClient.delete(delete_url)
+        rescue
+          abort("FAILURE => File not found !!!")
+        end
         puts 'SUCCESS => File deleted'
 
       end
@@ -130,6 +134,6 @@ end
   program = OCAW.new()
   #program.uploadFile(ARGV[1],ARGV[0])
   program.uploadFile("/Users/syky/Desktop/test02.gcode", "work")
-  program.deleteFile("test02.gcode", "work")
+  # program.deleteFile("test02.gcode", "work")
 
 
