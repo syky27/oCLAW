@@ -6,8 +6,7 @@ octoprint CLi Api Wrapper
 oCLAW is just a CLI to your OctoPrint. OctoPrint is awesome print server, but it's written in JavaScript, which needs a lot of RAM memomy on client's side. And also some users like Terminal more than Web browser.
 
 Install script will create `.config.json` file in your home directory, it looks like this:
-`
-{
+`{
     "printers": [
         {
             "printer": {
@@ -33,9 +32,8 @@ Install script will create `.config.json` file in your home directory, it looks 
 
         }
     ]
-}
+}`
 
-`
 
 
 
