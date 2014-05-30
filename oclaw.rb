@@ -84,18 +84,33 @@ class OCAW
       if  p.getName() == printer
         puts "printer ok"
         upload_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/" + p.getLocation().to_s
-        RestClient.post( upload_url, :file => File.new(file, 'r'), :select => p.getSelect().to_s, :apikey => p.getAPI().to_s )
+        begin
+          puts response =  RestClient.post( upload_url, :file => File.new(file, 'r'), :select => p.getSelect().to_s, :apikey => p.getAPI().to_s )
+          response = JSON.parse(response)
+        rescue
+          abort("File does not exists")
+        end
+        if response["done"] == true
+          puts 'SUCCESS => File ' + file + ' successfully uploaded to printer ' + printer + ' on ' + p.getLocation().to_s + ' storage.'
+        else
+          puts 'FAILURE => File ' + file + ' Not uploaded !!!'
+
+        end
       end
     end
   end
 
   def deleteFile(file, printer)
-
     @printers.each do |p|
       if p.getName() == printer
-        puts delete_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/"  + p.getLocation().to_s  + "/" + file.to_s + "?apikey=" + p.getAPI().to_s
-        puts p.getAPI()
-        puts RestClient.delete(delete_url)
+        begin
+          puts delete_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/"  + p.getLocation().to_s  + "/" + file.to_s + "?apikey=" + p.getAPI().to_s
+          response RestClient.delete(delete_url)
+          puts response
+        rescue
+          abort("FAILURE => File not found !!!")
+        end
+        puts 'SUCCESS => File deleted'
 
       end
     end
@@ -113,8 +128,9 @@ end
 
 
   program = OCAW.new()
-  program.uploadFile(ARGV[1],ARGV[0])
-  #program.deleteFile("test02.gcode", "home")
+  #program.uploadFile(ARGV[1],ARGV[0])
 
+  program.uploadFile("/Users/syky/Desktop/test02.gcode", "work")
+program.deleteFile("test02.gcode", "work")
 
 
