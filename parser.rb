@@ -15,16 +15,49 @@ class Printer
     @port = printer['printer']['port']
     @select = printer['printer']['select']
     @print = printer['printer']['print']
+    @location = printer['printer']['location']
+    @apikey = printer['printer']['apikey']
 
   end
 
   def info
-    puts 'Name    ' + @name
-    puts 'URL     ' + @url
-    puts 'PORT    ' + @port.to_s
-    puts 'select  ' + @select
-    puts 'print   ' + @print
+    puts 'Name      ' + @name
+    puts 'ApiKey    ' + @apikey
+    puts 'URL       ' + @url
+    puts 'PORT      ' + @port.to_s
+    puts 'select    ' + @select
+    puts 'print     ' + @print
+    puts 'location  ' + @location
   end
+
+  def getName
+    @name
+  end
+
+  def getURL
+    @url
+  end
+
+  def getPort
+    @port
+  end
+
+  def getSelect
+    @select
+  end
+
+  def getPrint
+    @print
+  end
+
+  def getLocation
+    @location
+  end
+
+  def getAPI
+    @apikey
+  end
+
 end
 
 
@@ -42,10 +75,23 @@ class OCAW
         # puts conf["port"]
         puts printer
         @printers.push( Printer.new(printer))
-
       end
     end
   end
+
+  def uploadFile(file, printer)
+    @printers.each  do  |p|
+      if  p.getName() == printer
+        puts "printer ok"
+        upload_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/" + p.getLocation().to_s
+        RestClient.post( upload_url, :file => File.new(file, 'r'), :select => p.getSelect().to_s, :apikey => p.getAPI().to_s )
+
+      end
+    end
+
+    # RestClient.post( @url, :file => File.new(file, 'r'), :select => @select, :apikey => @apikey )
+  end
+
 end
 
 
@@ -59,11 +105,18 @@ end
 # end
 
 # puts url = "http://" + printer_ip + ":5000/api/state?apikey=r3pr4pfit" 
-# puts upload_url = "http://" + printer_ip + ":5000/api/files/local"
+
 # u = "http://172.16.60.123:5000/ajax/gcodefiles/upload"
 # u = "http://172.16.60.123:5000/api/files/local"
 # uri = URI(url)
 # puts uri
+
+#initDefaultsFromConfig()
+#RestClient.post(u, File.new(ARGV[1]))
+# puts printer_state = Net::HTTP.get(uri) # => String
+# http://172.16.60.123:5000/ajax/gcodefiles/upload
+# http://localhost:5000/api/state?apikey=PUT_YOUR_API_KEY_HERE
+
 
 def initDefaultsFromConfig()
 	File.open(".config.json") do|config|
@@ -83,14 +136,9 @@ end
 
 
 
-  OCAW.new()
+  program = OCAW.new()
+  program.uploadFile(ARGV[0],"home")
 
-
-#initDefaultsFromConfig()
-#RestClient.post(u, File.new(ARGV[1]))
-# puts printer_state = Net::HTTP.get(uri) # => String
-# http://172.16.60.123:5000/ajax/gcodefiles/upload
-# http://localhost:5000/api/state?apikey=PUT_YOUR_API_KEY_HERE
 
 
 

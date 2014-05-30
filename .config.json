@@ -7,7 +7,8 @@
                 "port": 5000,
                 "apikey": "r3pr4pfit",
                 "select": "true",
-                "print": "false"
+                "print": "false",
+                "location":"local"
             }
         },
         {
@@ -17,7 +18,8 @@
                 "port": 5000,
                 "apikey": "fekal_fekal",
                 "select": "true",
-                "print": "false"
+                "print": "false",
+                "location":"local"
             }
 
         }
