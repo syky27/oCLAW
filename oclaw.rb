@@ -132,8 +132,8 @@ end
 
 
   program = OCAW.new()
-  #program.uploadFile(ARGV[1],ARGV[0])
-  program.uploadFile("/Users/syky/Desktop/test02.gcode", "work")
+  program.uploadFile(ARGV[1],ARGV[0])
+  #program.uploadFile("/Users/syky/Desktop/test02.gcode", "work")
   # program.deleteFile("test02.gcode", "work")
 
 
