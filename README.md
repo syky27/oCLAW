@@ -50,7 +50,12 @@ You can set API key to whatever you want it's setting is in octoprint frontend o
 
 
 Examples:
-`oclaw -mu 172.16.60.133 ~/my.gcode`
+//`oclaw -mu 172.16.60.133 ~/my.gcode` - thats the plan not working yet
+
+Current:
+oclaw [printer_name] [path_to_file]
+
+
 
 
 
