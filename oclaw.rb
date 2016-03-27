@@ -4,136 +4,80 @@ require 'optparse'
 require 'base64'
 require 'socket'
 require 'net/http'
+require 'net/ping'
 require 'rest_client'
 require 'json'
+require 'mixlib/cli'
+require 'terminal-table'
+require 'resolv'
 
+class OCLAW
 
-class Printer
-  def initialize(printer)
-    @name = printer['printer']['name']
-    @url  = printer['printer']['url']
-    @port = printer['printer']['port']
-    @select = printer['printer']['select']
-    @print = printer['printer']['print']
-    @location = printer['printer']['location']
-    @apikey = printer['printer']['apikey']
+  def list(*order)
 
-  end
+    rows = []
+    p Socket.ip_address_list
 
-  def info
-    puts 'Name      ' + @name
-    puts 'ApiKey    ' + @apikey
-    puts 'URL       ' + @url
-    puts 'PORT      ' + @port.to_s
-    puts 'select    ' + @select
-    puts 'print     ' + @print
-    puts 'location  ' + @location
-  end
+    # my_local_ip_address = p my_first_private_ipv4.ip_address.split('.')[0,3].join('.')
+    my_local_ip_address = '172.16.61'
+    for i in 204..204
+        url =  'http://' + my_local_ip_address.to_s + '.' + i.to_s + '/api/printer?apikey='
+        RestClient.get('http://' + my_local_ip_address.to_s + '.' + i.to_s + '/api/printer?apikey='){ |response, request, result, &block|
+          case response.code
+            when 200
+              json = JSON.parse(response)
+              printer_ip = request.url[/#{"http://"}(.*?)#{"/api"}/m, 1]
+              printer_state = json["state"]["text"]
+              printer_temp_bed = json["temperature"]["bed"]["actual"].to_s + ' => ' + json["temperature"]["bed"]["target"].to_s
+              printer_temp_nozzle = json["temperature"]["tool0"]["actual"].to_s + ' => ' + json["temperature"]["tool0"]["target"].to_s
+              # printer_hostname = Resolv.getname printer_ip
+              if order
+                rows << [0,0,printer_ip, printer_state, printer_temp_bed, printer_temp_nozzle ]
+              else
+                rows << [0,printer_ip, printer_state, printer_temp_bed, printer_temp_nozzle ]
+              end
 
-  def getName
-    @name
-  end
+              response
+            when 423
+              raise SomeCustomExceptionIfYouWant
+          end
+        }
 
-  def getURL
-    @url
-  end
-
-  def getPort
-    @port
-  end
-
-  def getSelect
-    @select
-  end
-
-  def getPrint
-    @print
-  end
-
-  def getLocation
-    @location
-  end
-
-  def getAPI
-    @apikey
-  end
-
-end
-
-
-class OCAW
-  def initialize
-    @printers = Array.new
-    loadConfig('.config.json')
-  end
-
-  def loadConfig(config)
-    File.open(config) do|config|
-      parsed = JSON.parse(config.read)
-      parsed["printers"].each do |printer|
-      @printers.push( Printer.new(printer))
-      end
-    end
-  end
-
-  def uploadFile(file, printer)
-    @printers.each  do  |p|
-      if  p.getName() == printer
-        upload_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/" + p.getLocation().to_s
-        begin
-          response =  RestClient.post( upload_url, :file => File.new(file, 'r'), :select => p.getSelect().to_s, :apikey => p.getAPI().to_s )
-          response = JSON.parse(response)
-        rescue
-          abort("File does not exists")
-        end
-        if response["done"] == true
-          sleep(50)
-          filename = file[ (file.rindex('/')) .. file.length]
-          puts info_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/"  + p.getLocation().to_s  + filename.to_s + "?apikey=" + p.getAPI().to_s
-          info = RestClient.get(info_url)
-          puts info
-          puts info = JSON.parse(info, )
-          puts info["gcodeAnalysis"] => "estimatedPrintTime"
-
-
-          puts 'SUCCESS => File ' + file + ' successfully uploaded to printer ' + printer + ' on ' + p.getLocation().to_s + ' storage.'
+        if order
+          table = Terminal::Table.new :title => "Available Printers", :headings => ['ID','Hostname','IP', 'State', 'Temp Bed', 'Temp Nozzle'], :rows => rows
         else
-          puts 'FAILURE => File ' + file + ' Not uploaded !!!'
-
+          table = Terminal::Table.new :title => "Available Printers", :headings => ['Hostname','IP', 'State', 'Temp Bed', 'Temp Nozzle'], :rows => rows
         end
-      end
+
+        puts table
     end
   end
 
-  def deleteFile(file, printer)
-    @printers.each do |p|
-      if p.getName() == printer
-        begin
-          delete_url = "http://" + p.getURL().to_s + ":"+ p.getPort().to_s + "/api/files/"  + p.getLocation().to_s  + "/" + file.to_s + "?apikey=" + p.getAPI().to_s
-          RestClient.delete(delete_url)
-        rescue
-          abort("FAILURE => File not found !!!")
-        end
-        puts 'SUCCESS => File deleted'
-
-      end
-    end
+  def heat
+    list(1)
   end
 
 
+  def my_first_private_ipv4
+    return Socket.ip_address_list.detect{|intf| intf.ipv4_private?}
+  end
 
+  end
+
+
+command = ARGV[0]
+
+case command
+  when "list"
+    oclaw = OCLAW.new()
+    oclaw.list(nil)
+
+  when "heat"
+    oclaw = OCLAW.new()
+    oclaw.heat
+
+  else
+    puts "Invalid option"
 end
-
-
-
-
-
-
-
-
-  program = OCAW.new()
-  program.uploadFile(ARGV[1],ARGV[0])
-  #program.uploadFile("/Users/syky/Desktop/test02.gcode", "work")
-  # program.deleteFile("test02.gcode", "work")
 
 
