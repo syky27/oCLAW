@@ -1,4 +1,3 @@
-# RestClient.post( upload_url, :file => File.new(ARGV[1], 'r'), :select => "true", :apikey => "r3pr4pfit" )
 require 'rubygems'
 require 'optparse'
 require 'base64'
@@ -13,65 +12,20 @@ require 'terminal-table'
 require 'resolv'
 require 'io/console'
 
-class APIRouter
-  def self.heat_bed(ip)
-    return appendAPIKey("http://#{ip}/api/printer/bed")
-  end
-
-  def self.heat_nozzle(ip)
-    return appendAPIKey("http://#{ip}/api/printer/tool")
-  end
-
-  def self.appendAPIKey(url)
-    return url + '?apikey=' + ENV['OCLAW_API_KEY'].to_s
-  end
-end
-
-class APIHelper
-
-  def self.heat_nozzle(temp)
-   return {:command => "target", :targets => { :tool0 => temp.to_i, :tool1 => temp.to_i, :tool2 => temp.to_i, :tool3 => temp.to_i, }}.to_json
-  end
-
-  def self.heat_bed(temp)
-    return {:command => "target", :target => temp.to_i}.to_json
-  end
-
-end
-
-class Printer
-  @hostname
-  @ip
-  @state
-  @temp_bed
-  @temp_nozzle
-
-  def initialize(hostname, ip, state, temp_bed, temp_nozzle)
-    @hostname = hostname
-    @ip = ip
-    @state = state
-    @temp_bed = temp_bed
-    @temp_nozzle = temp_nozzle
-
-  end
-
-  public def getRow
-    return [@hostname, @ip, @state, @temp_bed, @temp_nozzle]
-  end
-
-  public def getIP
-    return @ip.to_s
-  end
-
-end
+require  './APIHelper'
+require './APIRouter'
+require './Printer'
+require './APIWrapper'
+require './Instrument'
 
 class OCLAW
   @printers = []
 
-  def list(order)
+  def list()
     @printers = Array.new
     for i in discover
-        url =  'http://' + i.to_s + '/api/printer?apikey='
+        url =  APIRouter.printer_info i
+        puts url
         RestClient.get(url){ |response, request, result, &block|
           case response.code
             when 200
@@ -83,14 +37,16 @@ class OCLAW
               begin
                 printer_hostname = Resolv.getname printer_ip
               rescue Resolv::ResolvError
-                printer_hostname = "Unknown"
+                printer_hostname = "Not Resolved"
               end
                 @printers.push(Printer.new(printer_hostname, printer_ip , printer_state, printer_temp_bed, printer_temp_nozzle))
 
             when 423
               raise SomeCustomExceptionIfYouWant
             when 409
-              @printers.push(Printer(printer_hostname, "Offline", printer_state, printer_temp_bed, printer_temp_nozzle))
+              @printers.push(Printer(printer_hostname, printer_ip, "Conflict", "No Printers", "maybe?"))
+            when 401
+              @printers.push(Printer(printer_hostname,  printer_ip, "IVALID", "API", "KEY"))
           end
         }
     end
@@ -109,38 +65,23 @@ class OCLAW
     puts table
   end
 
+
+
   def heat
-    list true
+    list
     puts "Select printer by ID"
     printer = STDIN.gets.chomp
     puts "What would you like to heat?\n(1) Nozzle\n(2) Bed"
     instrument = STDIN.gets.chomp
     puts "Enter Temperature"
-    temperature = STDIN.gets.chomp
+    temp = STDIN.gets.chomp
 
     if instrument == "1"
-      puts APIRouter.heat_nozzle(@printers[printer.to_i].getIP)
-      RestClient.post(APIRouter.heat_nozzle(@printers[printer.to_i].getIP),  APIHelper.heat_nozzle(temperature),  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
-        case response.code
-          when 204
-            puts "SUCCESS - Printing live temp change :"
+      APIWrapper.heat(@printers[printer.to_i], temp, NOZZLE)
 
-            while 1
-              temp =  getTemp(@printers[printer.to_i].getIP) + "\r"
-              print temp
-              $stdout.flush
-              sleep 1
-            end
-
-          when 409
-            puts "Printer is Busy"
-          when 400
-            puts "Invalid"
-        end
-      }
     elsif instrument.to_s == "2"
       puts APIRouter.heat_bed(@printers[printer.to_i].getIP)
-      RestClient.post(APIRouter.heat_bed(@printers[printer.to_i].getIP) ,  APIHelper.heat_bed(temperature),  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
+      RestClient.post(APIRouter.heat_bed(@printers[printer.to_i].getIP) ,  APIHelper.heat_bed(temp),  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
         case response.code
           when 204
             puts "SUCCESS - Printing live temp change :"
@@ -212,20 +153,7 @@ class OCLAW
 
   end
 
-  def getTemp(printer_ip)
-    RestClient.get('http://' + printer_ip + '/api/printer?apikey=' ){ |response, request, result, &block|
-      case response.code
-        when 200
-          json = JSON.parse(response)
-          printer_temp_bed = json["temperature"]["bed"]["actual"].to_s + ' => ' + json["temperature"]["bed"]["target"].to_s
-          printer_temp_nozzle = json["temperature"]["tool0"]["actual"].to_s + ' => ' + json["temperature"]["tool0"]["target"].to_s
-          return "Temp Bed : " + printer_temp_bed.to_s + " Temp Nozzle " + printer_temp_nozzle.to_s
-        when 409
-          puts "Failure"
-      end
-    }
 
-  end
 
 
   def my_first_private_ipv4
@@ -239,7 +167,7 @@ command = ARGV[0]
 case command
   when "list"
     oclaw = OCLAW.new()
-    oclaw.list false
+    oclaw.list
 
   when "heat"
     oclaw = OCLAW.new()
@@ -248,9 +176,7 @@ case command
   when "discover"
     oclaw = OCLAW.new()
     oclaw.discover
-  when "betterList"
-    oclaw = OCLAW.new()
-    oclaw.betterList
+
   else
     puts "Invalid option"
 end

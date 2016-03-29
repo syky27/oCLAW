@@ -1,0 +1,2 @@
+NOZZLE = "tool"
+BED = "bed"

@@ -1,63 +1,58 @@
-oCLAW
-=====
+#oCLAW
+
 
 octoprint CLi Api Wrapper
 
 oCLAW is just a CLI to your OctoPrint. OctoPrint is awesome print server, but it's written in JavaScript, which needs a lot of RAM memomy on client's side. And also some users like Terminal more than Web browser.
 
-Install script will create `.config.json` file in your home directory, it looks like this:
+There will be gem for this soon!!!
 
-    {
-        "printers": [
-            {
-                "printer": {
-                    "name" :"home",
-                    "url": "172.16.60.123",
-                    "port": 5000,
-                    "apikey": "42fekals",
-                    "select": "true",
-                    "print": "false",
-                    "location":"local"
-                }
-            },
-            {
-                "printer": {
-                    "name": "work",
-                    "url": "172.16.60.133",
-                    "port": 5000,
-                    "apikey": "fekal_fekal",
-                    "select": "true",
-                    "print": "false",
-                    "location":"local"
-                }
-            }
-        ]
-    }
+In a meantime you can pull this repo, and install all needed gems that are in `oclaw.rb`
 
+## API KEY
+Octoprint need API Key (it can be blank) oCLAW takes enviromental variable `OCLAW_API_KEY`
+So just set this system variable to your api key and `oCLAW` will start to work.
 
-![](https://raw.githubusercontent.com/syky27/oCLAW/master/OP_API_KEY.png)
+Then you can run `ruby oclaw.rb list` oCLAW will start to scan your local network in same subnet so for example if your local ip address is `192.168.1.42`, oCLAW will start to scan ip addreses from `192.168.1.0` to `192.168.1.255`, for possible open `80` port.
 
+In case oCLAW finds some it will try to get send a `HTTP` request and find out if the ip address is actually running octoprint.
 
-You can set API key to whatever you want it's setting is in octoprint frontend or you can set apikey in Octoprint's `comfig.yaml`
+The output should look like this:
 
-`"select": "true"` `select` can be `true` or `false` it says if uploaded file will be set as selected to be ready to print.
+```
++----+--------------+---------------+-------------+-------------+-------------+
+|                             Available Printers                              |
++----+--------------+---------------+-------------+-------------+-------------+
+| ID | Hostname     | IP            | State       | Temp Bed    | Temp Nozzle |
++----+--------------+---------------+-------------+-------------+-------------+
+| 0  | Not Resolved | 192.168.1.102 | Operational | 52.2 => 0.0 | 49.5 => 1.0 |
+| 1  | Not Resolved | 192.168.1.103 | Operational | 25.5 => 2.0 | 30.4 => 1.0 |
++----+--------------+---------------+-------------+-------------+-------------+
+```
 
+## Actions 
+### heat
+You can use `ruby oclaw.rb heat`, this if what you'll get:
 
-`"print": "false"` `print` is also boolean and it says if the print is supposed to start right away after file uploading
+```
++----+--------------+---------------+-------------+-------------+----------------+
+|                               Available Printers                               |
++----+--------------+---------------+-------------+-------------+----------------+
+| ID | Hostname     | IP            | State       | Temp Bed    | Temp Nozzle    |
++----+--------------+---------------+-------------+-------------+----------------+
+| 0  | Not Resolved | 192.168.1.102 | Operational | 32.8 => 0.0 | 108.9 => 230.0 |
+| 1  | Not Resolved | 192.168.1.103 | Operational | 25.5 => 2.0 | 25.9 => 1.0    |
++----+--------------+---------------+-------------+-------------+----------------+
+Select printer by ID
+1
+What would you like to heat?
+(1) Nozzle
+(2) Bed
+1
+Enter Temperature
+230
+SUCCESS - Printing live temp change :
+Temp Bed : 25.4 => 2.0 Temp Nozzle 27.2 => 230.0
+```
 
-
-`"location": "local"` `location` set's you main storage, `local`  or  `sdcard`
-
-
-Examples:
-
-`oclaw -mu 172.16.60.133 ~/my.gcode` - thats the plan not working yet
-
-Current:
-
-`oclaw [printer_name] [path_to_file]`
-
-
-
-
-
+oCLAW will start to automaticaly update your temperature status.
