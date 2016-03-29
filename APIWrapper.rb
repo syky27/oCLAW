@@ -2,6 +2,7 @@ require './APIRouter'
 require './APIHelper'
 require './Printer'
 require './Instrument'
+require './File'
 
 class APIWrapper
   def self.heat(printer, temp, instrument)
@@ -37,9 +38,32 @@ class APIWrapper
           puts "Failure"
       end
     }
-
   end
 
+  def self.getFiles(printer)
+    files = []
+    RestClient.get(APIRouter.files_info(printer.getIP)){ |response|
+      case response.code
+        when 200
+          json = JSON.parse(response)
+          for file in json["files"]
+            files.push(OctoFile.new(:name => file["name"],
+                                :size => file["size"],
+                                :date => file["date"],
+                                :origin => file["origin"],
+                                :download_url => file["refs"]["download"],
+                                :print_time => file["gcodeAnalysis"]["estimatedPrintTime"],
+                                :filament_lenght => file["gcodeAnalysis"]["filament"]["length"],
+                                :filament_volume => file["gcodeAnalysis"]["filament"]["volume"],
+                                :print_fail => file["prints"]["failure"],
+                                :print_success => file["prints"]["success"]))
+          end
+          return files
 
+        when 409
+          puts "Failure"
+      end
+    }
+  end
 
 end

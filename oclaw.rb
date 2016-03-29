@@ -17,10 +17,11 @@ require './APIRouter'
 require './Printer'
 require './APIWrapper'
 require './Instrument'
+require './File'
 
 class OCLAW
   @printers = []
-
+  @files = []
   def list()
     @printers = Array.new
     for i in discover
@@ -65,8 +66,6 @@ class OCLAW
     puts table
   end
 
-
-
   def heat
     list
     puts "Select printer by ID"
@@ -78,36 +77,32 @@ class OCLAW
 
     if instrument == "1"
       APIWrapper.heat(@printers[printer.to_i], temp, NOZZLE)
-
     elsif instrument.to_s == "2"
-      puts APIRouter.heat_bed(@printers[printer.to_i].getIP)
-      RestClient.post(APIRouter.heat_bed(@printers[printer.to_i].getIP) ,  APIHelper.heat_bed(temp),  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
-        case response.code
-          when 204
-            puts "SUCCESS - Printing live temp change :"
-
-            while 1
-              temp =  getTemp(@printers[printer.to_i].getIP) + "\r"
-              print temp
-              $stdout.flush
-              sleep 1
-            end
-
-          when 409
-            puts "Printer is Busy"
-          when 400
-            puts "Invalid"
-        end
-      }
+      APIWrapper.heat(@printers[printer.to_i], temp, BED)
     else
       puts "Ivalid option... Starting over"
       return heat
     end
-
-
-
   end
 
+  def list_files
+    list
+    puts 'Select printer by ID'
+    printer = STDIN.gets.chomp
+
+    @files = APIWrapper.getFiles(@printers[printer.to_i])
+
+    rows = []
+    counter = 0
+    for file in @files
+      rows << file.getRow.unshift(counter.to_s)
+      counter += 1
+    end
+
+    table = Terminal::Table.new :title => "Available Files", :headings => ['ID','Filename','Size', 'Date', 'Origin', 'Print Time', 'Filament Lenght', 'Filament Volume', 'Failure', 'Success'], :rows => rows
+    puts table
+
+  end
 
   def discover
     count = 0
@@ -122,17 +117,17 @@ class OCLAW
           Thread.current["state"] = "OK"
           Thread.current["address"] = ip_address
         rescue SocketError
-          Thread.current["state"] = "KO"
+          Thread.current["state"] = "SOCKETERROR"
         rescue Timeout::Error
-          Thread.current["state"] = "KO"
+          Thread.current["state"] = "Error"
         rescue Errno::ECONNREFUSED
-          Thread.current["state"] = "KO"
+          Thread.current["state"] = "ECONNREFUSED"
         rescue Errno::EHOSTUNREACH
-          Thread.current["state"] = "KO"
+          Thread.current["state"] = "EHOSTUNREACH"
         rescue Errno::EACCES
-          Thread.current["state"] = "KO"
+          Thread.current["state"] = "EACCES"
         rescue Errno::EHOSTDOWN
-          Thread.current["state"] = "KO"
+          Thread.current["state"] = "EHOSTDOWN"
         end
         count += 1
 
@@ -150,11 +145,7 @@ class OCLAW
     end
     puts "available ips \n" + ips_with_open_port.to_s
     return ips_with_open_port
-
   end
-
-
-
 
   def my_first_private_ipv4
     return Socket.ip_address_list.detect{|intf| intf.ipv4_private?}.ip_address.split('.')[0,3].join('.')
@@ -176,6 +167,10 @@ case command
   when "discover"
     oclaw = OCLAW.new()
     oclaw.discover
+
+  when "files"
+    oclaw = OCLAW.new()
+    oclaw.list_files
 
   else
     puts "Invalid option"
