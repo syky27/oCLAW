@@ -13,19 +13,65 @@ require 'terminal-table'
 require 'resolv'
 require 'io/console'
 
+class APIRouter
+  def self.heat_bed(ip)
+    return appendAPIKey("http://#{ip}/api/printer/bed")
+  end
+
+  def self.heat_nozzle(ip)
+    return appendAPIKey("http://#{ip}/api/printer/tool")
+  end
+
+  def self.appendAPIKey(url)
+    return url + '?apikey=' + ENV['OCLAW_API_KEY'].to_s
+  end
+end
+
+class APIHelper
+
+  def self.heat_nozzle(temp)
+   return {:command => "target", :targets => { :tool0 => temp.to_i, :tool1 => temp.to_i, :tool2 => temp.to_i, :tool3 => temp.to_i, }}.to_json
+  end
+
+  def self.heat_bed(temp)
+    return {:command => "target", :target => temp.to_i}.to_json
+  end
+
+end
+
+class Printer
+  @hostname
+  @ip
+  @state
+  @temp_bed
+  @temp_nozzle
+
+  def initialize(hostname, ip, state, temp_bed, temp_nozzle)
+    @hostname = hostname
+    @ip = ip
+    @state = state
+    @temp_bed = temp_bed
+    @temp_nozzle = temp_nozzle
+
+  end
+
+  public def getRow
+    return [@hostname, @ip, @state, @temp_bed, @temp_nozzle]
+  end
+
+  public def getIP
+    return @ip.to_s
+  end
+
+end
 
 class OCLAW
   @printers = []
 
   def list(order)
-    rows = []
-    threads = []
-    counter = 0
     @printers = Array.new
     for i in discover
-      url =  'http://' + i.to_s + '/api/printer?apikey='
-
-      threads[counter] = Thread.new {
+        url =  'http://' + i.to_s + '/api/printer?apikey='
         RestClient.get(url){ |response, request, result, &block|
           case response.code
             when 200
@@ -34,41 +80,32 @@ class OCLAW
               printer_state = json["state"]["text"]
               printer_temp_bed = json["temperature"]["bed"]["actual"].to_s + ' => ' + json["temperature"]["bed"]["target"].to_s
               printer_temp_nozzle = json["temperature"]["tool0"]["actual"].to_s + ' => ' + json["temperature"]["tool0"]["target"].to_s
-              # printer_hostname = Resolv.getname printer_ip
-              @printers.push(printer_ip)
-              if order
-                Thread.current["row"] = [0,0,printer_ip, printer_state, printer_temp_bed, printer_temp_nozzle ]
-              else
-                Thread.current["row"] = [0,printer_ip, printer_state, printer_temp_bed, printer_temp_nozzle ]
+              begin
+                printer_hostname = Resolv.getname printer_ip
+              rescue Resolv::ResolvError
+                printer_hostname = "Unknown"
               end
+                @printers.push(Printer.new(printer_hostname, printer_ip , printer_state, printer_temp_bed, printer_temp_nozzle))
 
-              response
             when 423
               raise SomeCustomExceptionIfYouWant
             when 409
-              if order
-                Thread.current["row"] = [0,0,"Printer", "not", "operational", "409"]
-              else
-                Thread.current["row"] = [0,"Printer", "not", "operational", "409"]
-              end
+              @printers.push(Printer(printer_hostname, "Offline", printer_state, printer_temp_bed, printer_temp_nozzle))
           end
         }
-      }
+    end
+    printTable
+  end
 
+  def printTable
+    rows = Array.new
+    counter = 0
+    for printer in @printers
+      rows << printer.getRow.unshift(counter.to_s)
       counter += 1
     end
 
-    for thread in threads
-      thread.join
-      rows << thread["row"]
-    end
-
-    if order == true
-      table = Terminal::Table.new :title => "Available Printers", :headings => ['ID','Hostname','IP', 'State', 'Temp Bed', 'Temp Nozzle'], :rows => rows
-    else
-      table = Terminal::Table.new :title => "Available Printers", :headings => ['Hostname','IP', 'State', 'Temp Bed', 'Temp Nozzle'], :rows => rows
-    end
-
+    table = Terminal::Table.new :title => "Available Printers", :headings => ['ID','Hostname','IP', 'State', 'Temp Bed', 'Temp Nozzle'], :rows => rows
     puts table
   end
 
@@ -78,33 +115,56 @@ class OCLAW
     printer = STDIN.gets.chomp
     puts "What would you like to heat?\n(1) Nozzle\n(2) Bed"
     instrument = STDIN.gets.chomp
-    if instrument.to_s == "1"
-      instrument == "tool0"
+    puts "Enter Temperature"
+    temperature = STDIN.gets.chomp
+
+    if instrument == "1"
+      puts APIRouter.heat_nozzle(@printers[printer.to_i].getIP)
+      RestClient.post(APIRouter.heat_nozzle(@printers[printer.to_i].getIP),  APIHelper.heat_nozzle(temperature),  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
+        case response.code
+          when 204
+            puts "SUCCESS - Printing live temp change :"
+
+            while 1
+              temp =  getTemp(@printers[printer.to_i].getIP) + "\r"
+              print temp
+              $stdout.flush
+              sleep 1
+            end
+
+          when 409
+            puts "Printer is Busy"
+          when 400
+            puts "Invalid"
+        end
+      }
     elsif instrument.to_s == "2"
-      instrument = "bed"
+      puts APIRouter.heat_bed(@printers[printer.to_i].getIP)
+      RestClient.post(APIRouter.heat_bed(@printers[printer.to_i].getIP) ,  APIHelper.heat_bed(temperature),  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
+        case response.code
+          when 204
+            puts "SUCCESS - Printing live temp change :"
+
+            while 1
+              temp =  getTemp(@printers[printer.to_i].getIP) + "\r"
+              print temp
+              $stdout.flush
+              sleep 1
+            end
+
+          when 409
+            puts "Printer is Busy"
+          when 400
+            puts "Invalid"
+        end
+      }
     else
       puts "Ivalid option... Starting over"
       return heat
     end
-    puts "Enter Temperature"
-    temperature = STDIN.gets.chomp
 
-    RestClient.post('http://172.16.61.204/api/printer/' + instrument.to_s + '?apikey=',  {:command => "target", :target => temperature.to_i}.to_json,  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
-    case response.code
-      when 204
-        puts "Success\nPrinting temp change"
 
-        while 1
-          puts getTemp(1)
-          sleep 1
-        end
 
-      when 409
-        puts "Printer is Busy"
-      when 400
-        puts "Invalid"
-    end
-    }
   end
 
 
@@ -135,24 +195,25 @@ class OCLAW
         end
         count += 1
 
-      }end
+      }
+    end
 
     ips_with_open_port = Array.new
     for a in arr
       a.join
-      puts a["state"]
       if a["address"]
         ips_with_open_port.push(a["address"])
       else
         arr.delete(a)
       end
     end
+    puts "available ips \n" + ips_with_open_port.to_s
     return ips_with_open_port
 
   end
 
   def getTemp(printer_ip)
-    RestClient.get('http://172.16.61.204/api/printer?apikey=' ){ |response, request, result, &block|
+    RestClient.get('http://' + printer_ip + '/api/printer?apikey=' ){ |response, request, result, &block|
       case response.code
         when 200
           json = JSON.parse(response)
@@ -172,7 +233,6 @@ class OCLAW
   end
 
   end
-
 
 command = ARGV[0]
 
