@@ -9,14 +9,7 @@ class APIWrapper
     RestClient.post(APIRouter.heat(printer, instrument),  APIHelper.heat(temp, instrument),  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
       case response.code
         when 204
-          puts "SUCCESS - Printing live temp change :"
-
-          while 1
-            temp =  APIWrapper.getTemp(printer) + "\r"
-            print temp
-            $stdout.flush
-            sleep 1
-          end
+          puts "Success"
 
         when 409
           puts "Printer is Busy"
@@ -25,6 +18,19 @@ class APIWrapper
       end
     }
   end
+
+
+  def self.liveTemp(printer)
+    puts "Live Temp :"
+
+    while 1
+      temp =  APIWrapper.getTemp(printer) + "\r"
+      print temp
+      $stdout.flush
+      sleep 1
+    end
+  end
+
 
   def self.getTemp(printer)
     RestClient.get(APIRouter.printer_info(printer)){ |response, request, result, &block|

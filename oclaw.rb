@@ -74,16 +74,29 @@ class OCLAW
   def heat
     list
     puts "Select printer by ID"
-    printer = STDIN.gets.chomp
-    puts "What would you like to heat?\n(1) Nozzle\n(2) Bed"
+    printer = STDIN.gets.chomp.to_i
+    puts "What would you like to heat?\n(1) Nozzle\n(2) Bed\n(*) All"
     instrument = STDIN.gets.chomp
+
+    if instrument == "*"
+      puts "Enter desire nozzle temp"
+      nozzle_temp = STDIN.gets.chomp
+      puts "Enter desire bed temp"
+      bed_temp = STDIN.gets.chomp
+      APIWrapper.heat(Printer.all_instances[printer], bed_temp, BED)
+      APIWrapper.heat(Printer.all_instances[printer], nozzle_temp, NOZZLE)
+      APIWrapper.liveTemp(Printer.all_instances[printer])
+    end
+
     puts "Enter Temperature"
     temp = STDIN.gets.chomp
 
     if instrument == "1"
-      APIWrapper.heat(Printer.all_instances[printer.to_i], temp, NOZZLE)
+      APIWrapper.heat(Printer.all_instances[printer], temp, NOZZLE)
+      APIWrapper.liveTemp(Printer.all_instances[printer])
     elsif instrument.to_s == "2"
-      APIWrapper.heat(Printer.all_instances[printer.to_i], temp, BED)
+      APIWrapper.heat(Printer.all_instances[printer], temp, BED)
+      APIWrapper.liveTemp(Printer.all_instances[printer])
     else
       puts "Ivalid option... Starting over"
       return heat
@@ -185,7 +198,6 @@ class OCLAW
       end
     end
     puts "available ips \n" + ips_with_open_port.to_s
-    # return ['192.168.99.100']
     return ips_with_open_port
   end
 
@@ -200,7 +212,7 @@ command = ARGV[0]
 case command
   when "list"
     OCLAW.new().list
-    
+
   when "heat"
     OCLAW.new().heat
 
