@@ -199,25 +199,19 @@ command = ARGV[0]
 
 case command
   when "list"
-    # Printer.new(ip: 'Ivan', api_key: 20)
-
-    oclaw = OCLAW.new()
-    oclaw.list
+    OCLAW.new().list
+    
   when "heat"
-    oclaw = OCLAW.new()
-    oclaw.heat
+    OCLAW.new().heat
 
   when "discover"
-    oclaw = OCLAW.new()
-    oclaw.discover
+    OCLAW.new().discover
 
   when "files"
-    oclaw = OCLAW.new()
-    oclaw.list_files
+    OCLAW.new().list_files
 
   when "status"
-    oclaw = OCLAW.new()
-    oclaw.file
+    OCLAW.new().file
 
   else
     puts "Invalid option"
