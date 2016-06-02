@@ -16,7 +16,7 @@ So just set this system variable to your api key and `oCLAW` will start to work.
 Then you can run `ruby oclaw.rb list` oCLAW will start to scan your local network in same subnet so for example if your local ip address is `192.168.1.42`, oCLAW will start to scan ip addreses from `192.168.1.0` to `192.168.1.255`, for possible open `80` port.
 
 In case oCLAW finds some it will try to get send a `HTTP` request and find out if the ip address is actually running octoprint.
-
+ 
 The output should look like this:
 
 ```

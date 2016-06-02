@@ -6,7 +6,7 @@ require './File'
 
 class APIWrapper
   def self.heat(printer, temp, instrument)
-    RestClient.post(APIRouter.heat(printer.getIP, instrument),  APIHelper.heat(temp, instrument),  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
+    RestClient.post(APIRouter.heat(printer, instrument),  APIHelper.heat(temp, instrument),  :content_type => :json, :accept => :json  ){ |response, request, result, &block|
       case response.code
         when 204
           puts "SUCCESS - Printing live temp change :"
@@ -27,7 +27,7 @@ class APIWrapper
   end
 
   def self.getTemp(printer)
-    RestClient.get(APIRouter.printer_info(printer.getIP)){ |response, request, result, &block|
+    RestClient.get(APIRouter.printer_info(printer)){ |response, request, result, &block|
       case response.code
         when 200
           json = JSON.parse(response)
@@ -41,24 +41,23 @@ class APIWrapper
   end
 
   def self.getFiles(printer)
-    files = []
-    RestClient.get(APIRouter.files_info(printer.getIP)){ |response|
+    RestClient.get(APIRouter.files_info(printer)){ |response|
       case response.code
         when 200
           json = JSON.parse(response)
+          puts json
           for file in json["files"]
-            files.push(OctoFile.new(:name => file["name"],
+            printer.files.push(OctoFile.new(:name => file["name"],
                                 :size => file["size"],
                                 :date => file["date"],
                                 :origin => file["origin"],
                                 :download_url => file["refs"]["download"],
                                 :print_time => file["gcodeAnalysis"]["estimatedPrintTime"],
-                                :filament_lenght => file["gcodeAnalysis"]["filament"]["length"],
-                                :filament_volume => file["gcodeAnalysis"]["filament"]["volume"],
+                                :filament_lenght => file["gcodeAnalysis"]["filament"]["tool0"]["length"],
+                                :filament_volume => file["gcodeAnalysis"]["filament"]["tool0"]["volume"],
                                 :print_fail => file["prints"]["failure"],
                                 :print_success => file["prints"]["success"]))
           end
-          return files
 
         when 409
           puts "Failure"

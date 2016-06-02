@@ -12,6 +12,7 @@ require 'terminal-table'
 require 'resolv'
 require 'io/console'
 
+
 require  './APIHelper'
 require './APIRouter'
 require './Printer'
@@ -20,12 +21,13 @@ require './Instrument'
 require './File'
 
 class OCLAW
-  @printers = []
   @files = []
   def list()
-    @printers = Array.new
-    for i in discover
-        url =  APIRouter.printer_info i
+
+    initFromConfig
+
+    for printer in Printer.all_instances
+        url =  APIRouter.printer_info(printer)
         puts url
         RestClient.get(url){ |response, request, result, &block|
           case response.code
@@ -40,14 +42,17 @@ class OCLAW
               rescue Resolv::ResolvError
                 printer_hostname = "Not Resolved"
               end
-                @printers.push(Printer.new(printer_hostname, printer_ip , printer_state, printer_temp_bed, printer_temp_nozzle))
-
+                printer.update(hostname: printer_hostname, state: printer_state, temp_bed: printer_temp_bed, temp_nozzle: printer_temp_nozzle)
+            break
             when 423
               raise SomeCustomExceptionIfYouWant
+              break
             when 409
-              @printers.push(Printer(printer_hostname, printer_ip, "Conflict", "No Printers", "maybe?"))
+              printer.update hostname: "Not Resolved", state: "NO PRINTER"
+              break
             when 401
-              @printers.push(Printer(printer_hostname,  printer_ip, "IVALID", "API", "KEY"))
+              printer.update hostname: "Not Resolved", state: "API KEY FAIL"
+              break
           end
         }
     end
@@ -57,7 +62,7 @@ class OCLAW
   def printTable
     rows = Array.new
     counter = 0
-    for printer in @printers
+    for printer in Printer.all_instances
       rows << printer.getRow.unshift(counter.to_s)
       counter += 1
     end
@@ -76,9 +81,9 @@ class OCLAW
     temp = STDIN.gets.chomp
 
     if instrument == "1"
-      APIWrapper.heat(@printers[printer.to_i], temp, NOZZLE)
+      APIWrapper.heat(Printer.all_instances[printer.to_i], temp, NOZZLE)
     elsif instrument.to_s == "2"
-      APIWrapper.heat(@printers[printer.to_i], temp, BED)
+      APIWrapper.heat(Printer.all_instances[printer.to_i], temp, BED)
     else
       puts "Ivalid option... Starting over"
       return heat
@@ -88,46 +93,80 @@ class OCLAW
   def list_files
     list
     puts 'Select printer by ID'
-    printer = STDIN.gets.chomp
-
-    @files = APIWrapper.getFiles(@printers[printer.to_i])
+    printer = STDIN.gets.chomp.to_i
+    if printer > Printer.all_instances.count
+      puts "Invalid ID"
+      return list_files
+    end
+    APIWrapper.getFiles(Printer.all_instances[printer])
 
     rows = []
     counter = 0
-    for file in @files
+    for file in Printer.all_instances[printer].files
       rows << file.getRow.unshift(counter.to_s)
       counter += 1
     end
-
     table = Terminal::Table.new :title => "Available Files", :headings => ['ID','Filename','Size', 'Date', 'Origin', 'Print Time', 'Filament Lenght', 'Filament Volume', 'Failure', 'Success'], :rows => rows
     puts table
 
+  end
+
+  def file_options
+    puts 'Select File Action\n(P) Print\n(U) Upload\n(D) Delete\n(Q) Quit'
+    action = STDIN.gets.chomp
+    case action.to_s.upcase
+      when 'P'
+        puts 'print'
+      when 'U'
+        puts 'upload'
+
+    end
+
+
+  end
+
+  def initFromConfig
+    File.open('/Users/syky/.oclaw.config') do |f|
+      f.each_line do |line|
+        tuple = line.to_s.strip.split(' ')
+        Printer.new ip: tuple[0], api_key: tuple[1]
+      end
+    end
   end
 
   def discover
     count = 0
     arr = []
     my_local_ip_address =  my_first_private_ipv4
-    puts my_local_ip_address
     255.times do |i|
       arr[i] = Thread.new {
         begin
           ip_address = my_local_ip_address.to_s + "." + i.to_s
-          Timeout::timeout(3) { Thread.current["socket"] = TCPSocket.new(ip_address, 80) }
+          Timeout::timeout(30) { Thread.current["socket"] = TCPSocket.new(ip_address, 80) }
           Thread.current["state"] = "OK"
           Thread.current["address"] = ip_address
+          Thread.current["socket"].close
         rescue SocketError
           Thread.current["state"] = "SOCKETERROR"
+          socket = Thread.current["socket"]
         rescue Timeout::Error
-          Thread.current["state"] = "Error"
+          Thread.current["state"] = "TIMEOUT"
+          socket = Thread.current["socket"]
         rescue Errno::ECONNREFUSED
           Thread.current["state"] = "ECONNREFUSED"
+          socket = Thread.current["socket"]
         rescue Errno::EHOSTUNREACH
           Thread.current["state"] = "EHOSTUNREACH"
+          socket = Thread.current["socket"]
         rescue Errno::EACCES
           Thread.current["state"] = "EACCES"
+          socket = Thread.current["socket"]
         rescue Errno::EHOSTDOWN
           Thread.current["state"] = "EHOSTDOWN"
+          socket = Thread.current["socket"]
+        rescue Errno::EMFILE
+          Thread.current["state"] = "EMFILE"
+          socket = Thread.current["socket"]
         end
         count += 1
 
@@ -137,13 +176,16 @@ class OCLAW
     ips_with_open_port = Array.new
     for a in arr
       a.join
+      puts a["state"]
       if a["address"]
+        print a["address"]
         ips_with_open_port.push(a["address"])
       else
         arr.delete(a)
       end
     end
     puts "available ips \n" + ips_with_open_port.to_s
+    # return ['192.168.99.100']
     return ips_with_open_port
   end
 
@@ -157,9 +199,10 @@ command = ARGV[0]
 
 case command
   when "list"
+    # Printer.new(ip: 'Ivan', api_key: 20)
+
     oclaw = OCLAW.new()
     oclaw.list
-
   when "heat"
     oclaw = OCLAW.new()
     oclaw.heat
@@ -171,6 +214,10 @@ case command
   when "files"
     oclaw = OCLAW.new()
     oclaw.list_files
+
+  when "status"
+    oclaw = OCLAW.new()
+    oclaw.file
 
   else
     puts "Invalid option"

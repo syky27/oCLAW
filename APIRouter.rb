@@ -1,17 +1,17 @@
 class APIRouter
-  def self.appendAPIKey(url)
-    return url + '?apikey=' + ENV['OCLAW_API_KEY'].to_s
+  def self.appendAPIKey(url, api_key)
+    return url + '?apikey=' + api_key
   end
 
-  def self.printer_info(ip)
-    return appendAPIKey("http://#{ip}/api/printer")
+  def self.printer_info(printer)
+    return appendAPIKey("http://#{printer.getIP}/api/printer", printer.api_key)
   end
 
-  def self.heat(ip, instrument)
-    return appendAPIKey("http://#{ip}/api/printer/#{instrument}")
+  def self.heat(printer, instrument)
+    return appendAPIKey("http://#{printer.getIP}/api/printer/#{instrument}", printer.api_key)
   end
 
-  def self.files_info(ip)
-    return appendAPIKey("http://#{ip}/api/files")
+  def self.files_info(printer)
+    return appendAPIKey("http://#{printer.getIP}/api/files", printer.api_key)
   end
 end
