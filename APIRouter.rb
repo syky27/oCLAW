@@ -14,4 +14,14 @@ class APIRouter
   def self.files_info(printer)
     return appendAPIKey("http://#{printer.getIP}/api/files", printer.api_key)
   end
+
+  def self.upload_file(printer)
+    return appendAPIKey("http://#{printer.getIP}/api/files/local", printer.api_key)
+  end
+
+  def self.delete_file(printer, file)
+    return appendAPIKey("http://#{printer.getIP}/api/files/#{file.origin}/#{file.name}", printer.api_key)
+  end
+
+
 end

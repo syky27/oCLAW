@@ -53,21 +53,35 @@ class APIWrapper
           json = JSON.parse(response)
           puts json
           for file in json["files"]
-            printer.files.push(OctoFile.new(:name => file["name"],
-                                :size => file["size"],
-                                :date => file["date"],
-                                :origin => file["origin"],
-                                :download_url => file["refs"]["download"],
-                                :print_time => file["gcodeAnalysis"]["estimatedPrintTime"],
-                                :filament_lenght => file["gcodeAnalysis"]["filament"]["tool0"]["length"],
-                                :filament_volume => file["gcodeAnalysis"]["filament"]["tool0"]["volume"],
-                                :print_fail => file["prints"]["failure"],
-                                :print_success => file["prints"]["success"]))
+            printer.files.push(OctoFile.new(:name => file["name"] || "Unavailable",
+                                :size => file["size"] || "Unavailable",
+                                :date => file["date"] || "Unavailable",
+                                :origin => file["origin"] || "Unavailable",
+                                :download_url => file["refs"] ? file["refs"]["download"] : "Unavailable",
+                                :print_time => file["gcodeAnalysis"] ? file["gcodeAnalysis"]["estimatedPrintTime"] : "Unavailable",
+                                :filament_lenght => file["gcodeAnalysis"] ? file["gcodeAnalysis"]["filament"]["tool0"]["length"] : "Unavailable",
+                                :filament_volume => file["gcodeAnalysis"] ? file["gcodeAnalysis"]["filament"]["tool0"]["volume"] : "Unavailable",
+                                :print_fail =>  file["prints"] ? file["prints"]["failure"] : "Unavailable",
+                                :print_success => file["prints"] ? file["prints"]["success"] : "Unavailable"))
           end
 
         when 409
           puts "Failure"
       end
+    }
+  end
+
+  def self.uploadFile(printer, file)
+    RestClient.post APIRouter.upload_file(printer), :myfile => File.new('/Users/syky/Desktop/OCLAW.gcode', 'rb')
+    # RestClient.post(APIRouter.upload_file(printer),
+    #                 :name_of_file_param => File.new(file))
+  end
+
+  def self.deleteFile(printer, file)
+    RestClient.delete APIRouter.delete_file(printer, file) { |response|
+      puts response.code
+      json = JSON.parse(response)
+      puts json
     }
   end
 

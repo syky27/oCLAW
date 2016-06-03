@@ -22,6 +22,7 @@ require './File'
 
 class OCLAW
   @files = []
+  @selectedPrinter
   def list()
 
     initFromConfig
@@ -106,16 +107,16 @@ class OCLAW
   def list_files
     list
     puts 'Select printer by ID'
-    printer = STDIN.gets.chomp.to_i
-    if printer > Printer.all_instances.count
+    @selectedPrinter = STDIN.gets.chomp.to_i
+    if @selectedPrinter > Printer.all_instances.count
       puts "Invalid ID"
       return list_files
     end
-    APIWrapper.getFiles(Printer.all_instances[printer])
+    APIWrapper.getFiles(Printer.all_instances[@selectedPrinter])
 
     rows = []
     counter = 0
-    for file in Printer.all_instances[printer].files
+    for file in Printer.all_instances[@selectedPrinter].files
       rows << file.getRow.unshift(counter.to_s)
       counter += 1
     end
@@ -134,9 +135,36 @@ class OCLAW
         puts 'upload'
 
     end
+  end
+
+  def upload(path)
+    list
+    puts "Select printer by ID"
+    selectedPrinter = STDIN.gets.chomp.to_i
+    APIWrapper.uploadFile(Printer.all_instances[selectedPrinter], path)
+  end
+
+  def delete
+    list_files
+    selected_files = Array.new
+    puts "Select file ID, '*' for all files"
+
+
+    STDIN.readline.split.each { |n|
+      puts n
+      APIWrapper.deleteFile Printer.all_instances[@selectedPrinter], Printer.all_instances[@selectedPrinter].files[n.to_i]
+    }
+
+    # STDIN.read.split(' ').each do |selected_file|
+    #   puts selected_file
+    #   APIWrapper.deleteFile Printer.all_instances[@selectedPrinter], Printer.all_instances[@selectedPrinter].files[selected_file]
+    # end
+
+
 
 
   end
+
 
   def initFromConfig
     File.open('/Users/syky/.oclaw.config') do |f|
@@ -225,6 +253,11 @@ case command
   when "status"
     OCLAW.new().file
 
+  when "upload"
+    OCLAW.new().upload(ARGV[1])
+
+  when "delete"
+    OCLAW.new().delete
   else
     puts "Invalid option"
 end
